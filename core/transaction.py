@@ -9,11 +9,11 @@ from Crypto.Hash import SHA256
 class TransactionInput:
     def __init__(
             self,
-            previousTransactionHash: str,
-            previousTransactionIndex: int,
+            referencedHash: str,
+            referencedOutputIndex: int,
             signature: str) -> None:
-        self.referencedHash = previousTransactionHash
-        self.referencedOutputIndex = previousTransactionIndex
+        self.referencedHash = referencedHash
+        self.referencedOutputIndex = referencedOutputIndex
         self.signature = signature
 
     def serialize(self) -> str:
@@ -41,7 +41,7 @@ class TransactionInput:
             outputData
         ).encode('utf-8'))
         return hash
-print("i love you, i think you're the best <3 i'll love you forever and I think you're the perfect man for me. I want to take a shower but someone is in the bathroom. Did you know that bathroom is used more in the United states of america versus canada which is washroom. Never ever say we both became fat please speak for yourself fah hairflip fingersnap eye roll butt twerk. anyways i really love you so much and I dont think i'll be so happy without you. you make my day every morning when i wake up and make my day again when i go to bed. Also your mom is great cause she feeds me a lot. I also really love your family because they're so nice. Anyways, just remember I love you more than I love my fried chicken. I've known you for 8 years now and we've been dating for more than 4. Never thought anybody would be more important to me than my Loblaws honey garlic chicken. I love you.")
+
     @staticmethod
     def createSignature(
             previousTransactionHash: str,
@@ -106,16 +106,18 @@ class Transaction(object):
         serialized += str(timestamp)
         return SHA256.new(serialized.encode("utf_8")).hexdigest()
 
-    def __repr__(self) -> str:
-        s = {"inputs": [], "outputs": [], "timestamp": self.timestamp}
+    def asDict(self):
+        s = {"inputs": [], "outputs": [], "timestamp": self.timestamp, "hash": self.hash}
 
         for input in self.inputs:
-            s["inputs"].append(input.__dict__)  # type: ignore
+            s["inputs"].append(input.__dict__.copy())  # type: ignore
 
         for outputs in self.outputs:
-            s["outputs"].append(outputs.__dict__)  # type: ignore
+            s["outputs"].append(outputs.__dict__.copy())  # type: ignore
+        return s
 
-        return json.dumps(s, indent=2)
+    def __repr__(self) -> str:
+        return json.dumps(self.asDict(), indent=2)
 
 
 def verifyTransactionInput(
@@ -198,6 +200,31 @@ def createTransaction(
             previousTransactionHashes[i],
             previousOutputIndices[i],
             signature
+        ))
+
+    return Transaction(inputs, outputs, timestamp)
+
+
+def createFromDictionary(transactionDict: dict) -> Transaction:
+    """
+    Creates a transaction from a dictionary object. This is mostly
+    done for deserialization
+    """
+    inputs: List[TransactionInput] = []
+    outputs: List[TransactionOutput] = []
+    timestamp = transactionDict["timestamp"]
+
+    for tInput in transactionDict["inputs"]:
+        inputs.append(TransactionInput(
+            tInput["referencedHash"],
+            tInput["referencedOutputIndex"],
+            tInput["signature"]
+        ))
+
+    for tOutput in transactionDict["outputs"]:
+        outputs.append(TransactionOutput(
+            tOutput["amount"],
+            tOutput["address"]
         ))
 
     return Transaction(inputs, outputs, timestamp)

@@ -1,35 +1,43 @@
 import time
+from typing import List
 
-from block import Block
-from hashutils import hasProofOfWork, generateHash
+from core.block import Block, hashBlock
+from core.transaction import Transaction
 
 
-def generateNextBlock(previousBlock: Block, nextBlockData: str) -> Block:
+def hasProofOfWork(hash: str) -> bool:
+    """
+    Checks if the first n half-bytes in the hash are zero, where n
+    is the difficulty.
+    """
+    difficulty = 1  # Number of most significant bytes that are zero.
+    return int(hash[:difficulty], 16) == 0
+
+
+def generateNextBlock(
+        previousBlock: Block,
+        transactions: List[Transaction]) -> Block:
     """
     Attempts to generate the next block in given new data
     """
     nextIndex = previousBlock.index + 1
     nextTimestamp = time.time()
-    nextBlockData = nextBlockData
     noonce = 0
 
     while True:
-        hash = generateHash(
+        hash = hashBlock(
             nextIndex,
             nextTimestamp,
-            nextBlockData,
+            transactions,
             noonce,
             previousBlock.hash)
         if hasProofOfWork(hash):
-            break
+            return Block(
+                index=nextIndex,
+                timestamp=nextTimestamp,
+                transactions=transactions,
+                noonce=noonce,
+                previousHash=previousBlock.hash)
         noonce += 1
 
-    nextBlock = \
-        Block(
-            index=nextIndex,
-            timestamp=nextTimestamp,
-            data=nextBlockData,
-            noonce=noonce,
-            previousHash=previousBlock.hash)
-
-    return nextBlock
+    return None
