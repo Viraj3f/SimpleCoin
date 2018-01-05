@@ -1,25 +1,17 @@
 import time
 import unittest
 from core import transaction
-from Crypto.PublicKey import RSA
+from test import private1, public1, public2, private2, public3, private3
 
 
 class TestTransaction(unittest.TestCase):
-    # Pregenerate private and public keys beforehand
-    # to speed up running the tests.
-    private1 = RSA.generate(2048)
-    public1 = private1.publickey().exportKey('DER').hex()
-    private2 = RSA.generate(2048)
-    public2 = private2.publickey().exportKey('DER').hex()
-    private3 = RSA.generate(2048)
-    public3 = private3.publickey().exportKey('DER').hex()
 
     def test_transactionInputValidation(self):
-        privateKey = TestTransaction.private1
-        publicKey = TestTransaction.public1
+        privateKey = private1
+        publicKey = public1
 
         """
-        Simulataed transaction
+        Simulated transaction
         1 gets 1000 bitcoin
         1 sends 700 bitcoin to 2 and 300 bitcoin to 3
         2 sends 700 bitcoin to 3
@@ -33,7 +25,7 @@ class TestTransaction(unittest.TestCase):
 
         # Create a valid input based on that first transaction
         nextTransaction = transaction.createTransaction(
-            outputAddresses=[TestTransaction.public2, TestTransaction.public3],
+            outputAddresses=[public2, public3],
             outputAmounts=[700, 300],
             timestamp=time.time(),
             previousTransactionHashes=[firstTransaction.hash],
@@ -46,12 +38,12 @@ class TestTransaction(unittest.TestCase):
                 firstTransaction, nextTransaction, 0)[0])
 
         transactionFrom2to3 = transaction.createTransaction(
-            outputAddresses=[TestTransaction.public3],
+            outputAddresses=[public3],
             outputAmounts=[700],
             timestamp=time.time(),
             previousTransactionHashes=[nextTransaction.hash],
             previousOutputIndices=[0],
-            privateKeys=[TestTransaction.private2]
+            privateKeys=[private2]
         )
 
         self.assertTrue(
@@ -60,7 +52,7 @@ class TestTransaction(unittest.TestCase):
         )
 
         finalTransaction = transaction.createTransaction(
-            outputAddresses=[TestTransaction.public1],
+            outputAddresses=[public1],
             outputAmounts=[10000],
             timestamp=time.time(),
             previousTransactionHashes=[
@@ -68,7 +60,7 @@ class TestTransaction(unittest.TestCase):
                 nextTransaction.hash
             ],
             previousOutputIndices=[0, 1],
-            privateKeys=[TestTransaction.private3, TestTransaction.private3]
+            privateKeys=[private3, private3]
         )
 
         self.assertTrue(
@@ -82,15 +74,17 @@ class TestTransaction(unittest.TestCase):
 
         # Forger tries to create a transaction with an output that they don't
         # own the public key to.
-        forgerPrivateKey = TestTransaction.private2
-        forgerTransaction = transaction.createTransaction(
+        validTransaction = transaction.createTransaction(
             outputAddresses=[publicKey],
             outputAmounts=[1000],
             timestamp=time.time(),
             previousTransactionHashes=[firstTransaction.hash],
             previousOutputIndices=[0],
-            privateKeys=[forgerPrivateKey]
+            privateKeys=[privateKey]
         )
+
+        forgerTransaction = validTransaction
+        forgerTransaction.outputs[0].address = public3
 
         self.assertFalse(
             transaction.verifyTransactionInput(
@@ -100,14 +94,14 @@ class TestTransaction(unittest.TestCase):
         # Invalid number of addresses for amounts
         with self.assertRaises(AssertionError):
             transaction.createTransaction(
-                outputAddresses=[TestTransaction.public1,
-                                 TestTransaction.public2],
+                outputAddresses=[public1,
+                                 public2],
                 outputAmounts=[1000],
                 timestamp=time.time())
 
         # Invalid output amount
         with self.assertRaises(AssertionError):
             transaction.createTransaction(
-                outputAddresses=[TestTransaction.public1],
+                outputAddresses=[public1],
                 outputAmounts=[0],
                 timestamp=time.time())

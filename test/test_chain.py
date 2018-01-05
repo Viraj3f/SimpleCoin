@@ -1,6 +1,6 @@
 import unittest
 import time
-from core import block, chain, transaction, mine
+from core import chain, transaction, mine
 from test import private1, private2, private3, public1, public2, public3
 
 
@@ -174,75 +174,124 @@ class TestUTXOManager(unittest.TestCase):
 
 
 class TestChain(unittest.TestCase):
-    def test_createValidChain(self):
-        testChain = chain.Chain()
-
-        driver = testChain.head.transactions
-
-        next = mine.generateNextBlock(testChain.head, driver)
-        testChain.addBlock(next)
-        self.assertTrue(
-            testChain.head.hash == next.hash,
-            msg="Test if a block can be added to a chain.")
-
-        nextnext = mine.generateNextBlock(next, driver)
-        testChain.addBlock(nextnext)
-        self.assertTrue(
-            testChain.head.hash == nextnext.hash,
-            msg="Test if a second block can be added to a chain.")
-
-        with self.assertRaises(chain.ChainException):
-            testChain.addBlock(next)
-
     def test_createLongChainValid(self):
-        pass
-        # tx1 = transaction.createTransaction([public1], [1000], timestamp)
-        # tx2 = transaction.createTransaction([public2], [1000], timestamp)
-        # tx3 = transaction.createTransaction([public3], [1000], timestamp)
+        # Genesis has 1000 coins
+        testChain = chain.Chain()
+        tx1 = transaction.createTransaction([public1], [1000], time.time())
+        tx2 = transaction.createTransaction(
+            outputAddresses=[public1],
+            outputAmounts=[1000],
+            timestamp=time.time(),
+            previousTransactionHashes=[tx1.hash],
+            previousOutputIndices=[0],
+            privateKeys=[private1]
+        )
 
-        # mine.ge
-    #     testChain = chain.Chain()
+        # 1 has 1000 SPC
+        b1 = mine.generateNextBlock(testChain.head, [tx1, tx2])
+        testChain.addBlock(b1)
 
-    #     with self.assertRaises(chain.ChainException):
-    #         testChain.addBlock(block.Block(1, 32, "ASDF", 0, ""))
+        # 1 gives 400 to 2 and 600 to 1
+        tx3 = transaction.createTransaction(
+            outputAddresses=[public2, public1],
+            outputAmounts=[400, 600],
+            timestamp=time.time(),
+            previousTransactionHashes=[tx2.hash],
+            previousOutputIndices=[0],
+            privateKeys=[private1]
+        )
+        b2 = mine.generateNextBlock(testChain.head, [tx3])
+        testChain.addBlock(b2)
 
-    #     with self.assertRaises(chain.ChainException):
-    #         next = mine.generateNextBlock(testChain.head, "DATA")
-    #         next.data = ""  # Intentionally corrupt block
-    #         testChain.addBlock(next)
+        # Test that an invalid transaction does not mess up the state
+        # 2 gives 400 to 3
+        tx4 = transaction.createTransaction(
+            outputAddresses=[public3],
+            outputAmounts=[400],
+            timestamp=time.time(),
+            previousTransactionHashes=[tx3.hash],
+            previousOutputIndices=[0],
+            privateKeys=[private2]
+        )
+        # 1 tries to give not enough money to 3
+        badTx = transaction.createTransaction(
+            outputAddresses=[public3],
+            outputAmounts=[10],
+            timestamp=time.time(),
+            previousTransactionHashes=[tx3.hash],
+            previousOutputIndices=[1],
+            privateKeys=[private1]
+        )
 
-#     def test_fork(self):
-#         testChain = chain.Chain()
+        b3 = mine.generateNextBlock(testChain.head, [badTx, tx4])
+        with self.assertRaises(chain.UTXOException):
+            testChain.addBlock(b3)
+        assert testChain.head == b2
 
-#         # Add two blocks to the chain
-#         next = mine.generateNextBlock(testChain.head, "DATA")
-#         nextnext = mine.generateNextBlock(next, "DATA")
-#         testChain.addBlock(next)
-#         testChain.addBlock(nextnext)
-#         self.assertTrue(testChain.head.hash == nextnext.hash)
+        # Proper transaction. 3 should now have 400 from 2 and 600 from 1
+        tx5 = transaction.createTransaction(
+            outputAddresses=[public3],
+            outputAmounts=[600],
+            timestamp=time.time(),
+            previousTransactionHashes=[tx3.hash],
+            previousOutputIndices=[1],
+            privateKeys=[private1]
+        )
 
-#         # Create a fork off the first block
-#         nextFork = mine.generateNextBlock(next, "DATA")
-#         testChain.addBlock(nextFork)
-#         # At this point, we expect both forks to be the same length, but
-#         # the first chain should take presedence.
-#         self.assertTrue(testChain.head.hash == nextnext.hash)
+        b3 = mine.generateNextBlock(testChain.head, [tx5, tx4])
+        testChain.addBlock(b3)
+        assert testChain.head == b3
 
-#         # Now the fork is longer than the original chain, so the head
-#         # should point to the new fork.
-#         nextnextFork = mine.generateNextBlock(nextFork, "DATA")
-#         testChain.addBlock(nextnextFork)
-#         self.assertTrue(testChain.head.hash == nextnextFork.hash)
+        # Create a fork off b2. It should be added to the chain.
+        # 2 gives 200 to 2 and 100 to 3. This is techincally invalid.
+        tx4alt = transaction.createTransaction(
+            outputAddresses=[public3, public2],
+            outputAmounts=[100, 200],
+            timestamp=time.time(),
+            previousTransactionHashes=[tx3.hash],
+            previousOutputIndices=[0],
+            privateKeys=[private2]
+        )
+        b3alt = mine.generateNextBlock(b2, [tx4alt])
+        testChain.addBlock(b3alt)
 
-#     def test_forkAsList(self):
-#         # Redo the previous test, except pass the nodes as a list.
-#         testChain = chain.Chain()
+        # 2 gives 200 to 1
+        tx5alt = transaction.createTransaction(
+            outputAddresses=[public1],
+            outputAmounts=[200],
+            timestamp=time.time(),
+            previousTransactionHashes=[tx4alt.hash],
+            previousOutputIndices=[1],
+            privateKeys=[private2]
+        )
+        b4alt = mine.generateNextBlock(b3alt, [tx5alt])
+        with self.assertRaises(chain.UTXOException):
+            testChain.addBlock(b4alt)
 
-#         # Add two blocks to the chain
-#         next = mine.generateNextBlock(testChain.head, "DATA")
-#         nextnext = mine.generateNextBlock(next, "DATA")
-#         nextFork = mine.generateNextBlock(next, "DATA")
-#         nextnextFork = mine.generateNextBlock(nextFork, "DATA")
-#         blocksToAdd = [next, nextnext, nextFork, nextnextFork]
-#         testChain.addBlocks(blocksToAdd)
-#         self.assertTrue(testChain.head.hash == nextnextFork.hash)
+        with self.assertRaises(chain.NoParentException):
+            testChain.addBlock(b4alt)
+
+        # The fork was invalid. Try adding it again,
+        # except
+        tx4alt = transaction.createTransaction(
+            outputAddresses=[public3, public2],
+            outputAmounts=[200, 200],
+            timestamp=time.time(),
+            previousTransactionHashes=[tx3.hash],
+            previousOutputIndices=[0],
+            privateKeys=[private2]
+        )
+        b3alt = mine.generateNextBlock(b2, [tx4alt])
+        testChain.addBlock(b3alt)
+
+        tx5alt = transaction.createTransaction(
+            outputAddresses=[public1],
+            outputAmounts=[200],
+            timestamp=time.time(),
+            previousTransactionHashes=[tx4alt.hash],
+            previousOutputIndices=[1],
+            privateKeys=[private2]
+        )
+        b4alt = mine.generateNextBlock(b3alt, [tx5alt])
+        testChain.addBlock(b4alt)
+        assert testChain.head == b4alt

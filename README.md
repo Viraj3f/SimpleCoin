@@ -5,6 +5,10 @@ Simple blockchain-based cryptocurrency implementation inspired by [Naive Coin](h
 # Instructions
 Coming soon...
 
+# Todo
+* Miner algorithims
+* P2P + wallets
+
 # Transactions
 Transactions are sent from one simpleCoin address to another. A transaction consists of a list of inputs and a list of outputs. Each output contains an address (the person recieving the simpleCoin) and an amount (SPC) of simpleCoin to send. An address recieving a simpleCoin from an ouput can later spend that exact amount of simpleCoin as an input for a future transaction. An input contains a reference to a previous output transaction by its hash transaction hash and index.
 
@@ -110,5 +114,3 @@ If a new block is valid with respect to the heado the chain, these additional ch
 * The sum of the referenced output amounts are equal to the sum of the amounts of the transaction output (unless it is coinbase)
 
 In the case where a new block is valid at some point that is not the head, a new fork is created. The head is updated automatically to match head of the longest fork. When a new fork becomes the new main chain, then the forked blocks are individually validated from common ancestor.
-
-##

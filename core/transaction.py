@@ -35,11 +35,9 @@ class TransactionInput:
         """
         Create a transaction signature hash for the signature
         """
-        hash = SHA256.new("{}{}".format(
-            previousTransactionHash,
-            outputIndex,
-            outputData
-        ).encode('utf-8'))
+        hash = SHA256.new()
+        hash.update(
+            (previousTransactionHash + str(outputIndex) + outputData).encode('utf-8'))
         return hash
 
     @staticmethod

@@ -21,7 +21,7 @@ class DuplicateBlockException(ChainException):
     pass
 
 
-class UTXOException(Exception):
+class UTXOException(ChainException):
     pass
 
 
@@ -186,11 +186,13 @@ class Chain:
                 "New block could not be verified." +
                 "\n" + "Message: " + msg)
 
-        self._updateUTXOAndHead(nextBlock)
-
         # Creates a new fork in the chain if the next block's previous block
         # does exists in the current chain.
         self.blocks[nextBlock.hash] = nextBlock
+
+        if nextBlock.index > self.head.index:
+            self._updateUTXOAndHead(nextBlock)
+
 
     def _updateUTXOAndHead(self, nextBlock):
         """
@@ -225,7 +227,8 @@ class Chain:
             transactions = newChain[i].transactions
             for j in range(len(transactions)):
                 tx = transactions[j]
-                if self.utxo.canSpend(tx):
+                canSpend, msg = self.utxo.canSpend(tx)
+                if canSpend:
                     self.utxo.spend(tx)
                 else:
                     # An invalid transaction was found. This means that
@@ -241,15 +244,16 @@ class Chain:
                         for tx in reversed(newChain[blockIndex].transactions):
                             self.utxo.revert(tx)
                     
-                    # Delete the remaining blocks in the chain
-                    for k in range(i, len(newChain)):
+                    # Delete the children blocks from the invalid block
+                    # as well as the :nvalid block itself from the chain.
+                    for k in range(i, -1, -1):
                         del self.blocks[newChain[k].hash]
                     
                     for oldBlock in reversed(oldChain):
-                        for tx in reversed(oldBlock.transacations):
+                        for tx in reversed(oldBlock.transactions):
                             self.utxo.spend(tx)
                     
-                    raise UTXOException("Block has invalid UTXOs.")
+                    raise UTXOException(msg)
 
         # If the new block increases the length of the current chain, then have
         # head point to this block. The verifyNextBlock method should check 
@@ -397,6 +401,7 @@ def verifyTransactionsSyntax(
         else:
             txHashes.add(tx.hash)
 
+        # Handle coinbase
         if len(tx.inputs) == 0:
             if len(tx.outputs) == 0:
                 return False, "No inputs in outputs found in transaction object."
