@@ -2,14 +2,16 @@
 
 Simple blockchain-based cryptocurrency implementation inspired by [Naive Coin](https://github.com/lhartikk/naivecoin). The entire blockchain is kept in memory, but there is simple JSON persistance for use between sessions. Unlike Naive Coin, simplecoin keeps forks in the blockchain and tries to deal with them.
 
-# Instructions
+## Instructions
 Coming soon...
 
-# Todo
-* Miner algorithims
+## Todo
+* Miners
 * P2P + wallets
+* Persistence
+* More explanations
 
-# Transactions
+## Transactions
 Transactions are sent from one simpleCoin address to another. A transaction consists of a list of inputs and a list of outputs. Each output contains an address (the person recieving the simpleCoin) and an amount (SPC) of simpleCoin to send. An address recieving a simpleCoin from an ouput can later spend that exact amount of simpleCoin as an input for a future transaction. An input contains a reference to a previous output transaction by its hash transaction hash and index.
 
 Transactions contain:
@@ -32,10 +34,10 @@ A transaction input is valid if:
 * The referenced transaction is not out of bounds
 * The signature of the transaction input can be verified using the the public key of the sender. The public key of the sender is the address from the referenced output.
 
-## Coinbase Transactions
+### Coinbase Transactions
 A special type of transaction occurs as a reward to miners. It is a transaction with only one output of 100 SPC to a single address. Unlike bitcoin, the reward fee is constant. This also means that there are an infinite number of SPC in existance. There are no transaction fees in simpleCoin.
 
-## Example
+### Example
 ```
 {
   "inputs": [
@@ -61,13 +63,13 @@ A special type of transaction occurs as a reward to miners. It is a transaction 
 }
 ```
 
-# Blocks
+## Blocks
 A block is a list of transactions. It contains an index, timestamp, transactions, noonce (random number that when hashed demonstrates the proof of work) and it's predecessors hash.
 
-## Proof of Work
+### Proof of Work
 A proof of work is required for each block if it wants to be added to the chain. The purpose of the proof of work is to prevent one single node from broadcasting fradulent blocks to other nodes. In this implementation, the proof of work is to have the first byte of the block's hash has equal to 0. This makes simpleCoin particularily vulnerable to alternative history attacks. This can be easily fixed by increasing the POW required for each block. However, the "easier" POW allows for faster testing and more time experimenting.
 
-## Example (genesis block)
+### Example (genesis block)
 ```
 {
     "hash": "d4942fcc1f1cfef1653616c9da0f9710da679126e6baadc7c9eae13e3a29398c",
@@ -91,7 +93,7 @@ A proof of work is required for each block if it wants to be added to the chain.
 }
 ```
 
-# Blockchain
+## Blockchain
 The chain is a linked list of blocks. New blocks are added directly to the head of a chain, or forked off on the side.
 
 A new block is considered valid when:
