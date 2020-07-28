@@ -1,6 +1,6 @@
 # SimpleCoin
 
-Simple blockchain-based cryptocurrency implementation inspired by [Naive Coin](https://github.com/lhartikk/naivecoin). The entire blockchain is kept in memory, but there is simple JSON persistance for use between sessions. Unlike Naive Coin, simplecoin keeps forks in the blockchain and tries to deal with them.
+Simple blockchain-based cryptocurrency implementation inspired by [Naive Coin](https://github.com/lhartikk/naivecoin). The entire blockchain is kept in memory, but there is simple JSON persistence for use between sessions. Unlike Naive Coin, simplecoin keeps forks in the blockchain and tries to deal with them.
 
 ## Instructions
 Coming soon...
